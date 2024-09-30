@@ -206,18 +206,32 @@ export class TypstDocumentContext<O = any> {
       0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.3, 1.5, 1.7, 1.9,
       2.1, 2.4, 2.7, 3, 3.3, 3.7, 4.1, 4.6, 5.1, 5.7, 6.3, 7, 7.7, 8.5, 9.4, 10,
     ];
+    const deltaDistanceThreshold = 20;
+    const pixelPerLine = 20;
+    let deltaDistance = 0;
     const wheelEventHandler = (event: WheelEvent) => {
       if (event.ctrlKey) {
         event.preventDefault();
+
         // retrieve dom state before any operation
         this.cachedDOMState = this.retrieveDOMState();
+
         if (window.onresize !== null) {
           // is auto resizing
           window.onresize = null;
         }
         const prevScaleRatio = this.currentScaleRatio;
+        // accumulate delta distance
+        const pixels =
+          event.deltaMode === 0 ? event.deltaY : event.deltaY * pixelPerLine;
+        deltaDistance += pixels;
+        if (Math.abs(deltaDistance) < deltaDistanceThreshold) {
+          return;
+        }
+        const scrollDirection = deltaDistance > 0 ? 1 : -1;
+        deltaDistance = 0;
         // Get wheel scroll direction and calculate new scale
-        if (event.deltaY < 0) {
+        if (scrollDirection === -1) {
           // enlarge
           if (this.currentScaleRatio >= factors.at(-1)!) {
             // already large than max factor
@@ -227,7 +241,7 @@ export class TypstDocumentContext<O = any> {
               .filter((x) => x > this.currentScaleRatio)
               .at(0)!;
           }
-        } else if (event.deltaY > 0) {
+        } else if (scrollDirection === 1) {
           // reduce
           if (this.currentScaleRatio <= factors.at(0)!) {
             return;
@@ -243,6 +257,7 @@ export class TypstDocumentContext<O = any> {
         const scrollFactor = this.currentScaleRatio / prevScaleRatio;
         const scrollX = event.pageX * (scrollFactor - 1);
         const scrollY = event.pageY * (scrollFactor - 1);
+
         // hide scrollbar if scale == 1
         if (Math.abs(this.currentScaleRatio - 1) < 1e-5) {
           this.hookedElem.classList.add("hide-scrollbar-x");
@@ -259,22 +274,27 @@ export class TypstDocumentContext<O = any> {
             this.hookedElem.parentElement?.classList.remove("hide-scrollbar-y");
           }
         }
+
         // reserve space to scroll down
         const svg = this.hookedElem.firstElementChild! as SVGElement;
         if (svg) {
           const scaleRatio = this.getSvgScaleRatio();
+
           const dataHeight = Number.parseFloat(
             svg.getAttribute("data-height")!
           );
           const scaledHeight = Math.ceil(dataHeight * scaleRatio);
+
           // we increase the height by 2 times.
           // The `2` is only a magic number that is large enough.
           this.hookedElem.style.height = `${scaledHeight * 2}px`;
         }
+
         // make sure the cursor is still on the same position
         window.scrollBy(scrollX, scrollY);
         // toggle scale change event
         this.addViewportChange();
+
         return false;
       }
     };
