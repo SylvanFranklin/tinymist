@@ -1,19 +1,25 @@
 import type { RenderSession } from "@myriaddreamin/typst.ts/dist/esm/renderer.mjs";
+import { TypstCancellationToken } from "@myriaddreamin/typst.ts/dist/esm/contrib/dom/typst-cancel.mjs";
 
 export interface ContainerDOMState {
   /// cached `hookedElem.offsetWidth` or `hookedElem.innerWidth`
   width: number;
   /// cached `hookedElem.offsetHeight` or `hookedElem.innerHeight`
   height: number;
+  window: {
+    innerWidth: number;
+    innerHeight: number;
+  };
   /// cached `hookedElem.getBoundingClientRect()`
   /// We only use `left` and `top` here.
   boundingRect: {
     left: number;
     top: number;
+    right: number;
   };
 }
 
-export type RenderMode = "svg" | "canvas";
+export type RenderMode = "svg" | "canvas" | "dom";
 
 export enum PreviewMode {
   Doc,
@@ -76,6 +82,8 @@ export class TypstDocumentContext<O = any> {
   patchQueue: [string, string][] = [];
   /// resources to dispose
   disposeList: (() => void)[] = [];
+  /// canvas render ctoken
+  canvasRenderCToken?: TypstCancellationToken;
 
   /// There are two scales in this class: The real scale is to adjust the size
   /// of `hookedElem` to fit the svg. The virtual scale (scale ratio) is to let
@@ -105,9 +113,14 @@ export class TypstDocumentContext<O = any> {
   cachedDOMState: ContainerDOMState = {
     width: 0,
     height: 0,
+    window: {
+      innerWidth: 0,
+      innerHeight: 0,
+    },
     boundingRect: {
       left: 0,
       top: 0,
+      right: 0,
     },
   };
 
@@ -130,6 +143,10 @@ export class TypstDocumentContext<O = any> {
           return {
             width: this.hookedElem.offsetWidth,
             height: this.hookedElem.offsetHeight,
+            window: {
+              innerWidth: window.innerWidth,
+              innerHeight: window.innerHeight,
+            },
             boundingRect: this.hookedElem.getBoundingClientRect(),
           };
         });
@@ -189,31 +206,18 @@ export class TypstDocumentContext<O = any> {
       0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.3, 1.5, 1.7, 1.9,
       2.1, 2.4, 2.7, 3, 3.3, 3.7, 4.1, 4.6, 5.1, 5.7, 6.3, 7, 7.7, 8.5, 9.4, 10,
     ];
-    const deltaDistanceThreshold = 20;
-    const pixelPerLine = 20;
-    let deltaDistance = 0;
     const wheelEventHandler = (event: WheelEvent) => {
       if (event.ctrlKey) {
         event.preventDefault();
-
         // retrieve dom state before any operation
         this.cachedDOMState = this.retrieveDOMState();
-
         if (window.onresize !== null) {
           // is auto resizing
           window.onresize = null;
         }
         const prevScaleRatio = this.currentScaleRatio;
-        // accumulate delta distance
-        const pixels = event.deltaMode === 0 ? event.deltaY : event.deltaY * pixelPerLine;
-        deltaDistance += pixels;
-        if (Math.abs(deltaDistance) < deltaDistanceThreshold) {
-          return;
-        }
-        const scrollDirection = deltaDistance > 0 ? 1 : -1;
-        deltaDistance = 0;
         // Get wheel scroll direction and calculate new scale
-        if (scrollDirection === -1) {
+        if (event.deltaY < 0) {
           // enlarge
           if (this.currentScaleRatio >= factors.at(-1)!) {
             // already large than max factor
@@ -223,7 +227,7 @@ export class TypstDocumentContext<O = any> {
               .filter((x) => x > this.currentScaleRatio)
               .at(0)!;
           }
-        } else if (scrollDirection === 1) {
+        } else if (event.deltaY > 0) {
           // reduce
           if (this.currentScaleRatio <= factors.at(0)!) {
             return;
@@ -239,7 +243,6 @@ export class TypstDocumentContext<O = any> {
         const scrollFactor = this.currentScaleRatio / prevScaleRatio;
         const scrollX = event.pageX * (scrollFactor - 1);
         const scrollY = event.pageY * (scrollFactor - 1);
-
         // hide scrollbar if scale == 1
         if (Math.abs(this.currentScaleRatio - 1) < 1e-5) {
           this.hookedElem.classList.add("hide-scrollbar-x");
@@ -256,46 +259,43 @@ export class TypstDocumentContext<O = any> {
             this.hookedElem.parentElement?.classList.remove("hide-scrollbar-y");
           }
         }
-
         // reserve space to scroll down
         const svg = this.hookedElem.firstElementChild! as SVGElement;
         if (svg) {
           const scaleRatio = this.getSvgScaleRatio();
-
           const dataHeight = Number.parseFloat(
             svg.getAttribute("data-height")!
           );
           const scaledHeight = Math.ceil(dataHeight * scaleRatio);
-
           // we increase the height by 2 times.
           // The `2` is only a magic number that is large enough.
           this.hookedElem.style.height = `${scaledHeight * 2}px`;
         }
-
         // make sure the cursor is still on the same position
         window.scrollBy(scrollX, scrollY);
         // toggle scale change event
         this.addViewportChange();
-
         return false;
       }
     };
 
-    const vscodeAPI = typeof acquireVsCodeApi !== "undefined";
-    if (vscodeAPI) {
-      window.addEventListener("wheel", wheelEventHandler, {
-        passive: false,
-      });
-      this.disposeList.push(() => {
-        window.removeEventListener("wheel", wheelEventHandler);
-      });
-    } else {
-      document.body.addEventListener("wheel", wheelEventHandler, {
-        passive: false,
-      });
-      this.disposeList.push(() => {
-        document.body.removeEventListener("wheel", wheelEventHandler);
-      });
+    if (this.renderMode !== "dom") {
+      const vscodeAPI = typeof acquireVsCodeApi !== "undefined";
+      if (vscodeAPI) {
+        window.addEventListener("wheel", wheelEventHandler, {
+          passive: false,
+        });
+        this.disposeList.push(() => {
+          window.removeEventListener("wheel", wheelEventHandler);
+        });
+      } else {
+        document.body.addEventListener("wheel", wheelEventHandler, {
+          passive: false,
+        });
+        this.disposeList.push(() => {
+          document.body.removeEventListener("wheel", wheelEventHandler);
+        });
+      }
     }
   }
 
@@ -370,10 +370,19 @@ export class TypstDocumentContext<O = any> {
       try {
         let t0 = performance.now();
 
+        const ctoken = this.canvasRenderCToken;
+        if (ctoken) {
+          await ctoken.cancel();
+          await ctoken.wait();
+          this.canvasRenderCToken = undefined;
+          console.log("cancel canvas rendering");
+        }
+
         let needRerender = false;
         // console.log('patchQueue', JSON.stringify(this.patchQueue.map(x => x[0])));
         while (this.patchQueue.length > 0) {
-          needRerender = this.processQueue(this.patchQueue.shift()!) || needRerender;
+          needRerender =
+            this.processQueue(this.patchQueue.shift()!) || needRerender;
         }
 
         // todo: trigger viewport change once
@@ -390,7 +399,9 @@ export class TypstDocumentContext<O = any> {
           `${e} ${(y - x).toFixed(2)} ms`;
         this.sampledRenderTime = t2 - t0;
         console.log(
-          [d("parse", t0, t1), d("rerender", t1, t2), d("total", t0, t2)].join(", ")
+          [d("parse", t0, t1), d("rerender", t1, t2), d("total", t0, t2)].join(
+            ", "
+          )
         );
 
         requestAnimationFrame(doUpdate);
@@ -404,13 +415,6 @@ export class TypstDocumentContext<O = any> {
   }
 
   private postprocessChanges() {
-    // case RenderMode.Svg: {
-    // const docRoot = this.hookedElem.firstElementChild as SVGElement;
-    // if (docRoot) {
-    //   window.initTypstSvg(docRoot);
-    //   this.rescale();
-    // }
-
     this.r.postRender();
 
     // todo: abstract this
@@ -466,7 +470,7 @@ export interface TypstDocument<T> {
 
 export function provideDoc<T extends TypstDocumentContext>(
   Base: GConstructor<T>
-): new (options: Options) => TypstDocument<T> {
+): new (options: Options & T["opts"]) => TypstDocument<T> {
   return class TypstDocument {
     public impl: T;
     public kModule: RenderSession;
@@ -586,7 +590,7 @@ export function composeDoc<
   F4,
   F5,
   F6,
-  F7
+  F7,
 >(
   Base: TBase,
   f1: (base: TBase) => F1,
@@ -606,7 +610,7 @@ export function composeDoc<
   F5,
   F6,
   F7,
-  F8
+  F8,
 >(
   Base: TBase,
   f1: (base: TBase) => F1,
@@ -628,7 +632,7 @@ export function composeDoc<
   F6,
   F7,
   F8,
-  F9
+  F9,
 >(
   Base: TBase,
   f1: (base: TBase) => F1,

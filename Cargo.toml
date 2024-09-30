@@ -187,15 +187,11 @@ withs = "withs"
 
 [workspace.metadata.typos.files]
 ignore-hidden = false
-extend-exclude = [
-  "/.git",
-  "fixtures",
-  "upstream",
-]
+extend-exclude = ["/.git", "fixtures", "upstream"]
 
 [patch.crates-io]
 
-# tinymist-assets = { path = "./crates/tinymist-assets/" }
+tinymist-assets = { path = "./crates/tinymist-assets/" }
 
 typst = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "tinymist-v0.12.0" }
 typst-timing = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "tinymist-v0.12.0" }
