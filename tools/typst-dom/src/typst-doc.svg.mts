@@ -617,21 +617,17 @@ export function provideSvgDoc<
         );
 
         const tok = (this.canvasRenderCToken = new TypstCancellationToken());
-
-        renderCanvasWhenIdle(
-          async () => {
-            await waitCancel;
-            this.updateCanvas(pagesInCanvasMode, {
-              cancel: tok,
-              lazy: true,
-            }).finally(() => {
-              if (tok === this.canvasRenderCToken) {
-                this.canvasRenderCToken = undefined;
-              }
-            });
-          },
-          { timeout: 1000 }
-        );
+        (async () => {
+          await waitCancel;
+          this.updateCanvas(pagesInCanvasMode, {
+            cancel: tok,
+            lazy: true,
+          }).finally(() => {
+            if (tok === this.canvasRenderCToken) {
+              this.canvasRenderCToken = undefined;
+            }
+          });
+        })();
       }
 
       if (this.isContentPreview) {
@@ -708,8 +704,3 @@ export function provideSvgDoc<
     }
   };
 }
-
-const renderCanvasWhenIdle =
-  "requestIdleCallback" in window
-    ? requestIdleCallback
-    : (cb: (args: void) => void, { timeout }: any) => setTimeout(cb, timeout);

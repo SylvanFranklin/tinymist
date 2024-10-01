@@ -152,7 +152,34 @@ export function provideCanvasDoc<
     ): Promise<void> {
       const tok = opts?.cancel || undefined;
       const perf = performance.now();
-      console.log("updateCanvas start");
+      console.log("submitUpdateCanvas start", pages);
+
+      let renderRequests = pages.map((pageInfo) => ({
+        canvas: pageInfo.elem.firstElementChild as HTMLCanvasElement,
+        pageOffset: pageInfo.index,
+        backgroundColor: "#ffffff",
+        pixelPerPt: this.pixelPerPt,
+        dataSelection: {
+          body: true,
+        },
+      }));
+      const res = this.kWorker.renderCanvas(renderRequests);
+      console.log(res);
+      res.then((results) => {
+        console.log("updateCanvas done", performance.now() - perf, results);
+      });
+
+      console.log("submitUpdateCanvas done", performance.now() - perf);
+      await tok?.consume();
+    }
+
+    async updateCanvasOld(
+      pages: CanvasPage[],
+      opts?: UpdateCanvasOptions
+    ): Promise<void> {
+      const tok = opts?.cancel || undefined;
+      const perf = performance.now();
+      console.log("updateCanvas start", pages);
       // todo: priority in window
       // await Promise.all(pagesInfo.map(async (pageInfo) => {
       this.kModule.backgroundColor = "#ffffff";
@@ -309,9 +336,8 @@ export function provideCanvasDoc<
 
     async rerender$canvas() {
       // console.log('toggleCanvasViewportChange!!!!!!', this.id, this.isRendering);
-      const pages: CanvasPage[] = this.kModule
-        .retrievePagesInfo()
-        .map((x, index) => {
+      const pages: CanvasPage[] = (await this.kWorker.retrievePagesInfo()).map(
+        (x, index) => {
           return {
             tag: "canvas",
             index,
@@ -320,7 +346,8 @@ export function provideCanvasDoc<
             container: undefined as any as HTMLDivElement,
             elem: undefined as any as HTMLDivElement,
           };
-        });
+        }
+      );
 
       if (!this.hookedElem.firstElementChild) {
         this.hookedElem.innerHTML = `<div class="typst-doc" data-render-mode="canvas"></div>`;

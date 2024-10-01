@@ -1,4 +1,7 @@
-import type { RenderSession } from "@myriaddreamin/typst.ts/dist/esm/renderer.mjs";
+import type {
+  RenderSession,
+  TypstWorker,
+} from "@myriaddreamin/typst.ts/dist/esm/renderer.mjs";
 import { TypstCancellationToken } from "@myriaddreamin/typst.ts/dist/esm/contrib/dom/typst-cancel.mjs";
 
 export interface ContainerDOMState {
@@ -29,6 +32,7 @@ export enum PreviewMode {
 export interface Options {
   hookedElem: HTMLElement;
   kModule: RenderSession;
+  kWorker: TypstWorker;
   renderMode?: RenderMode;
   previewMode?: PreviewMode;
   isContentPreview?: boolean;
@@ -47,6 +51,7 @@ interface TypstDocumentFacade {
 export class TypstDocumentContext<O = any> {
   public hookedElem: HTMLElement;
   public kModule: RenderSession;
+  public kWorker: TypstWorker;
   public opts: O;
   modes: [string, TypstDocumentFacade][] = [];
 
@@ -55,7 +60,7 @@ export class TypstDocumentContext<O = any> {
   /// enable partial rendering
   partialRendering: boolean = true;
   /// underlying renderer
-  renderMode: RenderMode = "svg";
+  renderMode: RenderMode = "canvas";
   r: TypstDocumentFacade = undefined!;
   /// preview mode
   previewMode: PreviewMode = PreviewMode.Doc;
@@ -68,7 +73,7 @@ export class TypstDocumentContext<O = any> {
   /// default page color (empty string means transparent)
   pageColor: string = "white";
   /// pixel per pt
-  pixelPerPt: number = 3;
+  pixelPerPt: number = 6;
   /// customized way to retrieving dom state
   retrieveDOMState: () => ContainerDOMState;
 
@@ -127,6 +132,7 @@ export class TypstDocumentContext<O = any> {
   constructor(opts: Options & O) {
     this.hookedElem = opts.hookedElem;
     this.kModule = opts.kModule;
+    this.kWorker = opts.kWorker;
     this.opts = opts || {};
 
     /// Apply configuration
@@ -164,6 +170,8 @@ export class TypstDocumentContext<O = any> {
       this.hookedElem.classList.add("hide-scrollbar-y");
       this.hookedElem.parentElement?.classList.add("hide-scrollbar-y");
     }
+
+    console.log("use renderMode", this.renderMode);
 
     this.installCtrlWheelHandler();
   }
@@ -351,10 +359,16 @@ export class TypstDocumentContext<O = any> {
         if (eventName === "new") {
           this.reset();
         }
-        this.kModule.manipulateData({
-          action: "merge",
-          data: svgUpdateEvent[1] as unknown as Uint8Array,
-        });
+        const data = svgUpdateEvent[1] as unknown as Uint8Array;
+        svgUpdateEvent[1] = undefined!;
+        // this.kModule.manipulateData({
+        //   action: "merge",
+        //   data,
+        // });
+        this.kWorker.manipulateData(
+          eventName === "new" ? "reset" : "merge",
+          data
+        );
 
         this.moduleInitialized = true;
         return true;
