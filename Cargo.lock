@@ -2873,8 +2873,6 @@ dependencies = [
 [[package]]
 name = "reflexo"
 version = "0.5.0-rc9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f73eee207a7d665262f6b3930ede406b7db2e946bf4d2da71e9f7d52436e3e9"
 dependencies = [
  "base64",
  "bitvec",
@@ -2899,8 +2897,6 @@ dependencies = [
 [[package]]
 name = "reflexo-typst"
 version = "0.5.0-rc9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a02123731ac8c421186dfa49e1b3ba6bf47462eab5ef79a5a2e94a1dbada8493"
 dependencies = [
  "codespan-reporting",
  "comemo 0.4.0",
@@ -2928,8 +2924,6 @@ dependencies = [
 [[package]]
 name = "reflexo-typst-shim"
 version = "0.5.0-rc9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "411cf108f3a013c2aeb43afb7ba18efaa8dd0e14464511f5a635f164beda738b"
 dependencies = [
  "cfg-if",
  "typst",
@@ -2939,8 +2933,6 @@ dependencies = [
 [[package]]
 name = "reflexo-typst2vec"
 version = "0.5.0-rc9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57ccc7218d4fbf5f370d3efcd4a7082bc4da58461cffb1d2d09399c6de1a7281"
 dependencies = [
  "bitvec",
  "comemo 0.4.0",
@@ -2965,8 +2957,6 @@ dependencies = [
 [[package]]
 name = "reflexo-vec2svg"
 version = "0.5.0-rc9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47518e908a003bb1b2c3d9d45f38903b745306868bfe9755fbec10d2cdd7c5f0"
 dependencies = [
  "base64",
  "comemo 0.4.0",
@@ -2979,8 +2969,6 @@ dependencies = [
 [[package]]
 name = "reflexo-vfs"
 version = "0.5.0-rc9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c0d7b3666f65e95c80d2c546432ccadbc140dad5f67ea193bf5823317ed6eb1"
 dependencies = [
  "indexmap 2.6.0",
  "log",
@@ -2994,8 +2982,6 @@ dependencies = [
 [[package]]
 name = "reflexo-world"
 version = "0.5.0-rc9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96731b1e700e7f62fa27d590ed8f03c139f839ddea9a324e4eb19756ca7968c8"
 dependencies = [
  "chrono",
  "codespan-reporting",
@@ -4046,7 +4032,7 @@ dependencies = [
  "serde_yaml",
  "strum",
  "sync-lsp",
- "tinymist-assets 0.12.5-rc1",
+ "tinymist-assets",
  "tinymist-query",
  "tinymist-render",
  "tinymist-world",
@@ -4090,12 +4076,6 @@ dependencies = [
 [[package]]
 name = "tinymist-assets"
 version = "0.12.4"
-
-[[package]]
-name = "tinymist-assets"
-version = "0.12.5-rc1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c2233471449a13ece0a44db31520d1e158d27fb4d4c38df1e41ba8bcc2fecf4"
 
 [[package]]
 name = "tinymist-derive"
@@ -4188,7 +4168,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tar",
- "tinymist-assets 0.12.5-rc1",
+ "tinymist-assets",
  "typst",
  "typst-assets",
 ]
@@ -4638,7 +4618,7 @@ dependencies = [
  "reflexo-vec2svg",
  "serde",
  "serde_json",
- "tinymist-assets 0.12.5-rc1",
+ "tinymist-assets",
  "tokio",
  "typst",
  "typst-assets",

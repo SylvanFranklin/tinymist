@@ -5,6 +5,8 @@ import { TypstPatchAttrs } from "./typst-patch.mjs";
 import type { GConstructor, TypstDocumentContext } from "./typst-doc.mjs";
 import type { TypstOutlineDocument } from "./typst-outline.mjs";
 
+const RENDER_TEXT = false;
+
 export interface CanvasPage {
   tag: "canvas";
   index: number;
@@ -68,7 +70,12 @@ export function provideCanvasDoc<
           );
 
           const canvas = document.createElement("canvas");
+          canvas.style.position = "absolute";
           pageInfo.elem.appendChild(canvas);
+
+          const semantics = document.createElement("div");
+          semantics.className = "typst-dom-page typst-html-semantics";
+          pageInfo.elem.appendChild(semantics);
 
           pageInfo.container = document.createElement("div");
           // todo: reuse by key
@@ -135,12 +142,14 @@ export function provideCanvasDoc<
         pageInfo.elem.setAttribute("data-page-width", pws);
         cached = false;
         canvas.width = pw * this.pixelPerPt;
+        pageInfo.elem.style.setProperty("--data-page-width", `${pws}px`);
       }
 
       if (pageInfo.elem.getAttribute("data-page-height") !== phs) {
         pageInfo.elem.setAttribute("data-page-height", phs);
         cached = false;
         canvas.height = ph * this.pixelPerPt;
+        pageInfo.elem.style.setProperty("--data-page-height", `${phs}px`);
       }
 
       return cached;
@@ -161,12 +170,34 @@ export function provideCanvasDoc<
         pixelPerPt: this.pixelPerPt,
         dataSelection: {
           body: true,
+          semantics: RENDER_TEXT,
         },
       }));
       const res = this.kWorker.renderCanvas(renderRequests);
       console.log(res);
       res.then((results) => {
         console.log("updateCanvas done", performance.now() - perf, results);
+        if (RENDER_TEXT) {
+          for (let i = 0; i < results.length; i++) {
+            const pageInfo = pages[i];
+            const result = results[i];
+            if (opts?.cancel?.isCancelRequested()) {
+              return;
+            }
+            const sema = result?.htmlSemantics?.[0];
+            if (!sema) {
+              continue;
+            }
+            const semanticsDiv = pageInfo.elem.lastElementChild as HTMLElement;
+            // if (!semanticsDiv.classList.contains("typst-html-semantics")) {
+            //   continue;
+            // }
+            semanticsDiv.innerHTML = sema;
+            semanticsDiv.style.width = pageInfo.width.toFixed(3);
+            semanticsDiv.style.height = pageInfo.height.toFixed(3);
+            console.log("updateCanvas one miss", pageInfo.elem);
+          }
+        }
       });
 
       console.log("submitUpdateCanvas done", performance.now() - perf);
@@ -277,6 +308,14 @@ export function provideCanvasDoc<
         // set data applied width and height to memoize change
         if (elem.getAttribute("data-applied-scale") !== appliedScale) {
           elem.setAttribute("data-applied-scale", appliedScale);
+          if (RENDER_TEXT) {
+            elem.style.setProperty(
+              "--typst-dom-scale",
+              this.pixelPerPt.toString()
+            );
+            elem.style.setProperty("--data-text-width", `4px`);
+            elem.style.setProperty("--data-text-height", `4px`);
+          }
           // apply translate
           const scaledWidth = Math.ceil(canvasWidth * scale);
           const scaledHeight = Math.ceil(canvasHeight * scale);
