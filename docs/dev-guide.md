@@ -8,20 +8,20 @@ Tinymist provides a single integrated language service for Typst. The tinymist p
 
 **The Editor Frontend** – Leveraging the interface of LSP, tinymist provides frontend to each editor, located in the [editor folder](../editors).
 
-**The builtin essential but optional features** – All rest features in tinymist are optional. The significant features are enabled by default, but you can disable them with feature flags.
+**The Optional features** –  These features are significant and useful to most users, and are enabled by default. You can disable them with feature flags.
 
-- The syntax highlighting feature powered by [textmate](../syntaxes/textmate/).
-- The document formatting feature powered by [typstfmt](https://github.com/astrale-sharp/typstfmt) or [typstyle](https://github.com/Enter-tainer/typstyle).
-- The document previewing feature powered by [`typst-preview`](../crates/typst-preview/).
-- The handwritten-stroke recognizer powered by [Detypify](https://detypify.quarticcat.com/).
+- Syntax highlighting powered by [textmate](../syntaxes/textmate/).
+- Document Formatting powered by [typstfmt](https://github.com/astrale-sharp/typstfmt) or [typstyle](https://github.com/Enter-tainer/typstyle).
+- Document Previewing powered by [`typst-preview`](../crates/typst-preview/).
+- Handwritten-stroke recognizer powered by [Detypify](https://detypify.quarticcat.com/).
 
-To get a full overview of the crates and structure of the project, you could take a look at [Overview of Service](https://myriad-dreamin.github.io/tinymist/overview.html).
+To get a full overview of the various crates and general structure of the project, you should take a look at the [Overview of Service](https://myriad-dreamin.github.io/tinymist/overview.html).
 
 ## Installing Toolchain
 
 To contribute to tinymist, you need to install the following tools:
 
-- [Cargo](https://doc.rust-lang.org/cargo/) to develop Rust [crates](../crates/).
+- [Cargo](https://doc.rust-lang.org/cargo/) for development in Rust [crates](../crates/).
 - [Yarn](https://yarnpkg.com/) to develop [VS Code extension](../editors/vscode/) or [tools](../tools/).
 
 ## Building and Running
